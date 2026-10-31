@@ -5,231 +5,189 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Personal PDF Analyzer</title>
 <style>
-*{box-sizing:border-box}
-body{margin:0;font-family:Inter,Arial,sans-serif;background:#f4f6fa;color:#202938}
-header{background:#151c2c;color:white;padding:19px 24px;display:flex;justify-content:space-between;align-items:center}
-header h2{margin:0;font-size:20px}
-main{max-width:1050px;margin:30px auto;padding:0 16px}
-.card{background:white;border:1px solid #e2e7ef;border-radius:13px;padding:22px;margin-bottom:20px;box-shadow:0 3px 14px rgba(0,0,0,.035)}
-h3{margin-top:0}
-input,button{font:inherit}
-input[type=password]{width:100%;padding:12px;border:1px solid #ccd3df;border-radius:7px;margin:10px 0}
-button{border:0;border-radius:7px;padding:11px 17px;cursor:pointer;background:#2563eb;color:white;font-weight:600}
-button:disabled{opacity:.5;cursor:not-allowed}
-.secondary{background:#475569}
-.hidden{display:none!important}
-.drop{border:2px dashed #b8c5d9;padding:35px 15px;text-align:center;border-radius:10px;background:#f8fafc;margin:15px 0}
-.drop input{max-width:100%;margin-top:14px}
-.progress{height:9px;background:#e5e7eb;border-radius:10px;overflow:hidden;margin-top:12px}
-.progress div{height:100%;width:0;background:#2563eb;transition:width .2s}
-.status{font-size:13px;color:#64748b;margin-top:10px}
-.result{border:1px solid #e2e8f0;border-radius:10px;padding:15px;margin-top:15px}
-.page{background:#f8fafc;border-left:3px solid #2563eb;padding:12px;margin:10px 0;white-space:pre-wrap;overflow-wrap:anywhere;font-family:Arial,sans-serif;font-size:13px;max-height:350px;overflow:auto}
-.meta{display:flex;flex-wrap:wrap;gap:12px;color:#64748b;font-size:13px;margin:10px 0}
-.error{color:#dc2626}.success{color:#15803d}
-footer{text-align:center;color:#94a3b8;font-size:12px;padding:25px}
+:root{--navy:#111827;--blue:#2563eb;--bg:#f3f5f9;--line:#e5e9f0;--muted:#64748b;--green:#15803d;--red:#dc2626}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:#172033;font-family:Inter,system-ui,Arial,sans-serif}
+header{height:66px;background:var(--navy);color:#fff;padding:0 22px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:5}
+.brand{font-weight:750;font-size:18px;letter-spacing:.1px}.brand span{color:#93c5fd}
+button,input{font:inherit}button{border:0;border-radius:9px;padding:10px 15px;background:var(--blue);color:white;font-weight:650;cursor:pointer}button:disabled{opacity:.55;cursor:not-allowed}.btn-light{background:#e9eef8;color:#26364f}.btn-dark{background:#334155}.btn-small{padding:7px 10px;font-size:12px}
+main{max-width:1250px;margin:24px auto;padding:0 16px}.card{background:#fff;border:1px solid var(--line);border-radius:14px;padding:18px;margin-bottom:16px;box-shadow:0 3px 12px #17203308}
+h2,h3,h4,p{margin-top:0}h3{font-size:16px;margin-bottom:8px}.muted,.hint{color:var(--muted);font-size:13px}.hidden{display:none!important}
+#login{max-width:430px;margin:70px auto}input[type=password],input[type=text]{width:100%;border:1px solid #cbd5e1;border-radius:9px;padding:12px;margin:8px 0 12px}
+.layout{display:grid;grid-template-columns:320px minmax(0,1fr);gap:16px;align-items:start}.sidebar{position:sticky;top:82px}.drop{border:2px dashed #b8c5d9;background:#f8fafc;padding:20px 12px;text-align:center;border-radius:11px;margin:13px 0}.drop input{max-width:100%;margin-top:12px}.file-list{display:grid;gap:8px;margin-top:12px}.file-item{border:1px solid var(--line);border-radius:9px;padding:10px;font-size:12px;overflow-wrap:anywhere}.file-item strong{display:block;font-size:13px;margin-bottom:4px}.file-item .ok{color:var(--green)}.file-item .bad{color:var(--red)}
+.progress{height:7px;background:#e8edf5;border-radius:20px;overflow:hidden;margin-top:12px}.progress>div{height:100%;width:0;background:var(--blue);transition:width .2s}.status{font-size:12px;color:var(--muted);margin-top:8px;min-height:16px}
+.chat-card{min-height:690px;display:flex;flex-direction:column;padding:0;overflow:hidden}.chat-head{padding:17px 19px;border-bottom:1px solid var(--line);display:flex;align-items:center;justify-content:space-between;gap:12px}.chat-head h3{margin:0}.chat-body{padding:18px;flex:1;min-height:420px;max-height:calc(100vh - 300px);overflow:auto;background:#fbfcfe}.welcome{text-align:center;max-width:570px;margin:65px auto;color:#475569}.welcome .emoji{font-size:34px;margin-bottom:12px}.welcome h2{color:#172033;font-size:22px;margin-bottom:8px}.suggestions{display:flex;gap:8px;flex-wrap:wrap;justify-content:center;margin-top:20px}.suggestions button{background:#eef3ff;color:#244b9b;border:1px solid #dce6ff;font-size:12px;font-weight:600}
+.message{display:flex;margin:0 0 18px;gap:10px;align-items:flex-start}.message.user{justify-content:flex-end}.bubble{max-width:94%;border-radius:13px;padding:12px 14px;line-height:1.5;font-size:14px;overflow-wrap:anywhere}.user .bubble{background:#e7efff;color:#173b7a;border:1px solid #d8e5ff}.assistant .bubble{background:#fff;border:1px solid var(--line);width:100%}.avatar{width:29px;height:29px;border-radius:50%;display:grid;place-items:center;flex:none;background:#e8efff;color:#2455a5;font-size:13px;font-weight:800}.user .avatar{display:none}.bubble p{margin:0 0 9px}.bubble p:last-child{margin-bottom:0}.bubble ul{margin:7px 0;padding-left:20px}.table-wrap{overflow:auto;margin:10px 0;border:1px solid var(--line);border-radius:8px}table{border-collapse:collapse;width:100%;font-size:12px;white-space:nowrap}th,td{text-align:left;padding:9px 11px;border-bottom:1px solid var(--line)}th{background:#f1f5f9;font-weight:700;color:#334155}tr:last-child td{border-bottom:0}.source{font-size:11px;color:#64748b;margin-top:8px}.chat-compose{border-top:1px solid var(--line);padding:14px;background:#fff}.compose-row{display:flex;gap:9px;align-items:flex-end}.compose-row textarea{flex:1;resize:vertical;min-height:48px;max-height:140px;border:1px solid #cbd5e1;border-radius:10px;padding:12px;font:inherit;font-size:14px}.compose-note{font-size:11px;color:#94a3b8;margin-top:7px}.toolbar{display:flex;gap:8px;flex-wrap:wrap}.pill{display:inline-flex;padding:4px 8px;border-radius:20px;background:#eef2ff;color:#3b50a0;font-size:11px;font-weight:650}.empty-docs{font-size:12px;color:#94a3b8;padding:8px 0}.warning{background:#fff7ed;border:1px solid #fed7aa;color:#9a3412;padding:10px;border-radius:9px;font-size:12px;margin-top:10px}
+@media(max-width:850px){.layout{grid-template-columns:1fr}.sidebar{position:static}.chat-card{min-height:600px}.chat-body{max-height:none}.chat-head{align-items:flex-start;flex-direction:column}}
 </style>
 </head>
 <body>
-<header>
-  <h2>📄 Personal PDF Analyzer</h2>
-  <button id="logout" class="secondary hidden">Logout</button>
-</header>
+<header><div class="brand">📄 Personal <span>PDF Analyzer</span></div><button id="logout" class="btn-dark hidden">Logout</button></header>
 <main>
 <section id="login" class="card">
-  <h3>Welcome back</h3>
-  <p>Enter your private workspace password.</p>
-  <input id="password" type="password" placeholder="Enter password">
-  <button id="loginBtn">Login</button>
-  <div id="loginStatus" class="status"></div>
+  <h2>Welcome back</h2><p class="muted">Sign in to your private PDF workspace.</p>
+  <input id="password" type="password" placeholder="Workspace password" autocomplete="current-password">
+  <button id="loginBtn">Login</button><div id="loginStatus" class="status"></div>
 </section>
 <section id="workspace" class="hidden">
-  <div class="card">
-    <h3>Upload PDF documents</h3>
-    <p>Maximum upload: <b>200 MB per PDF</b></p>
-    <p class="status">Digital PDFs are extracted directly. Scanned PDFs are processed using English OCR.</p>
-    <div class="drop">
-      <div>📁 Select one or more PDF documents</div>
-      <input id="files" type="file" accept=".pdf,application/pdf" multiple>
-    </div>
-    <button id="analyzeBtn">Analyze PDFs</button>
-    <div class="progress"><div id="progressBar"></div></div>
-    <div id="uploadStatus" class="status"></div>
-  </div>
-  <div class="card">
-    <h3>Processing information</h3>
-    <div id="serverInfo" class="status">Checking server...</div>
-  </div>
-  <div class="card">
-    <h3>Analysis results</h3>
-    <div id="results"><p class="status">No documents analyzed yet.</p></div>
-  </div>
+ <div class="layout">
+  <aside class="sidebar">
+   <div class="card">
+    <h3>Documents</h3><p class="hint">Chat searches every successfully uploaded PDF in this session.</p>
+    <div class="drop"><strong>Upload PDF files</strong><div class="hint">Up to 200 MB per file · multiple files supported</div><input id="files" type="file" accept=".pdf,application/pdf" multiple></div>
+    <button id="analyzeBtn" style="width:100%">Upload & process</button>
+    <div class="progress"><div id="progressBar"></div></div><div id="uploadStatus" class="status"></div>
+    <div id="fileList" class="file-list"><div class="empty-docs">No documents uploaded yet.</div></div>
+    <div class="toolbar" style="margin-top:12px"><button id="clearDocs" class="btn-light btn-small">Clear documents</button></div>
+    <div class="warning">Documents are kept in this browser tab's memory only. Refreshing or closing the tab clears the uploaded-document session.</div>
+   </div>
+   <div class="card"><h3>Server status</h3><div id="serverInfo" class="hint">Checking server...</div></div>
+  </aside>
+  <section class="card chat-card">
+   <div class="chat-head"><div><h3>Chat with your PDFs</h3><div class="hint" id="scopeText">No documents loaded · Upload PDFs to begin</div></div><div class="toolbar"><button id="exportChat" class="btn-light btn-small">Export chat</button><button id="clearChat" class="btn-light btn-small">Clear chat</button></div></div>
+   <div id="chatBody" class="chat-body">
+    <div class="welcome" id="welcome"><div class="emoji">💬</div><h2>Ask anything about your PDFs</h2><p>Upload one or more documents, then ask for bill numbers, invoice dates, GSTINs, amounts, duplicates, summaries or comparisons.</p><div class="suggestions"><button data-q="Extract all bill numbers from all uploaded PDFs">Extract bill numbers</button><button data-q="Find all invoice dates">Find invoice dates</button><button data-q="Extract all GSTIN numbers">Find GSTINs</button><button data-q="Find duplicate bill numbers">Find duplicates</button><button data-q="Summarize all uploaded PDFs">Summarize documents</button></div></div>
+   </div>
+   <div class="chat-compose"><div class="compose-row"><textarea id="question" placeholder="Ask a question about all uploaded PDFs... (Enter to send, Shift+Enter for new line)"></textarea><button id="sendBtn">Send</button></div><div class="compose-note">Answers are extracted from document text using local rules. Always verify important financial values against the source page.</div></div>
+  </section>
+ </div>
 </section>
 </main>
-<footer>Personal PDF Analyzer · Phase 1 · Temporary server-side processing</footer>
 <script>
 const $ = id => document.getElementById(id);
 let token = sessionStorage.getItem("pdf_token") || "";
+let documents = [];
+let conversation = [];
 
-function showWorkspace(){
-  $("login").classList.add("hidden");
-  $("workspace").classList.remove("hidden");
-  $("logout").classList.remove("hidden");
-  checkHealth();
-}
-function showLogin(){
-  $("workspace").classList.add("hidden");
-  $("login").classList.remove("hidden");
-  $("logout").classList.add("hidden");
-}
+function showWorkspace(){$("login").classList.add("hidden");$("workspace").classList.remove("hidden");$("logout").classList.remove("hidden");checkHealth();updateDocumentUI();}
+function showLogin(){$("workspace").classList.add("hidden");$("login").classList.remove("hidden");$("logout").classList.add("hidden");}
 async function login(){
-  const password = $("password").value;
-  $("loginStatus").textContent = "Checking...";
+  $("loginStatus").textContent="Checking...";
   try{
-    const response = await fetch("/api/login",{
-      method:"POST",
-      headers:{"Content-Type":"application/json"},
-      body:JSON.stringify({password})
+    const response=await fetch("/api/login",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({password:$("password").value})});
+    const data=await response.json();if(!response.ok)throw new Error(data.error);
+    token=data.token;sessionStorage.setItem("pdf_token",token);$("password").value="";showWorkspace();
+  }catch(error){$("loginStatus").textContent=error.message;$("loginStatus").className="status error";}
+}
+$("loginBtn").onclick=login;$("password").addEventListener("keydown",e=>{if(e.key==="Enter")login();});
+$("logout").onclick=()=>{token="";sessionStorage.removeItem("pdf_token");documents=[];conversation=[];showLogin();};
+async function checkHealth(){try{const r=await fetch("/api/health");const d=await r.json();$("serverInfo").textContent=`Online · RAM ${d.memory_mb} MB · uptime ${d.uptime_seconds}s`;}catch(_){$("serverInfo").textContent="Server unavailable";}}
+
+function updateDocumentUI(){
+  const list=$("fileList");list.replaceChildren();
+  if(!documents.length){const empty=document.createElement("div");empty.className="empty-docs";empty.textContent="No documents uploaded yet.";list.append(empty);}
+  documents.forEach((doc,index)=>{
+    const item=document.createElement("div");item.className="file-item";
+    const name=document.createElement("strong");name.textContent=doc.filename;
+    const meta=document.createElement("div");meta.className="ok";meta.textContent=`${doc.pageCount} pages · ${doc.size_mb} MB · ready`;
+    const remove=document.createElement("button");remove.className="btn-light btn-small";remove.style.marginTop="7px";remove.textContent="Remove";remove.onclick=()=>{documents.splice(index,1);updateDocumentUI();};
+    item.append(name,meta,remove);list.append(item);
+  });
+  $("scopeText").textContent=documents.length?`${documents.length} document(s) loaded · Searching all documents`:
+    "No documents loaded · Upload PDFs to begin";
+}
+
+function uploadOne(file){return new Promise((resolve,reject)=>{
+  const xhr=new XMLHttpRequest();const form=new FormData();form.append("pdf",file);xhr.open("POST","/api/analyze");xhr.setRequestHeader("Authorization","Bearer "+token);
+  xhr.upload.onprogress=e=>{if(e.lengthComputable){const p=Math.round(e.loaded/e.total*100);$("progressBar").style.width=p+"%";$("uploadStatus").textContent=`Uploading ${file.name}: ${p}%`;}};
+  xhr.onload=()=>{let data;try{data=JSON.parse(xhr.responseText);}catch(_){return reject(new Error("Invalid server response."));}
+    if(xhr.status===401){sessionStorage.removeItem("pdf_token");token="";showLogin();return reject(new Error("Session expired. Please login again."));}
+    if(xhr.status<200||xhr.status>=300)return reject(new Error(data.error||"Processing failed."));resolve(data);};
+  xhr.onerror=()=>reject(new Error("Network connection failed."));xhr.ontimeout=()=>reject(new Error("Request timed out."));xhr.timeout=0;xhr.send(form);
+});}
+
+$("analyzeBtn").onclick=async()=>{
+  const files=Array.from($("files").files);if(!files.length){alert("Select at least one PDF.");return;}
+  if(files.some(f=>!f.name.toLowerCase().endsWith(".pdf")||f.size>200*1024*1024)){alert("Only PDF files up to 200 MB each are accepted.");return;}
+  $("analyzeBtn").disabled=true;let done=0;let failures=[];
+  for(const file of files){$("progressBar").style.width="0%";$("uploadStatus").textContent=`Processing ${file.name}...`;
+    try{const data=await uploadOne(file);documents.push(data);done++;updateDocumentUI();}
+    catch(error){failures.push(`${file.name}: ${error.message}`);}
+  }
+  $("uploadStatus").textContent=`${done} of ${files.length} document(s) processed.`+(failures.length?" Errors: "+failures.join(" | "):"");
+  $("progressBar").style.width="100%";$("analyzeBtn").disabled=false;$("files").value="";checkHealth();
+  if(done&&conversation.length===0)addMessage("assistant",`Ready. I have indexed ${done} document(s). You can now ask questions across all uploaded PDFs. Try: “Extract all bill numbers” or “Find duplicate invoice numbers”.`);
+};
+$("clearDocs").onclick=()=>{if(!documents.length)return;if(confirm("Remove all uploaded documents from this session?")){documents=[];updateDocumentUI();}};
+
+function addMessage(role,text,html){
+  $("welcome").classList.add("hidden");const row=document.createElement("div");row.className=`message ${role}`;
+  if(role==="assistant"){const avatar=document.createElement("div");avatar.className="avatar";avatar.textContent="AI";row.append(avatar);}
+  const bubble=document.createElement("div");bubble.className="bubble";
+  if(html)bubble.append(html);else{const p=document.createElement("p");p.textContent=text;bubble.append(p);}
+  row.append(bubble);$("chatBody").append(row);$("chatBody").scrollTop=$("chatBody").scrollHeight;
+  conversation.push({role,text:text||bubble.innerText,html:!!html});
+}
+function makeTable(headers,rows){
+  const wrap=document.createElement("div");wrap.className="table-wrap";const table=document.createElement("table");const thead=document.createElement("thead");const tr=document.createElement("tr");
+  headers.forEach(h=>{const th=document.createElement("th");th.textContent=h;tr.append(th);});thead.append(tr);table.append(thead);
+  const tbody=document.createElement("tbody");rows.forEach(row=>{const tr=document.createElement("tr");row.forEach(value=>{const td=document.createElement("td");td.textContent=String(value??"");tr.append(td);});tbody.append(tr);});table.append(tbody);wrap.append(table);return wrap;
+}
+function addStructuredMessage(title,paragraph,headers,rows,filename="pdf-analysis"){
+  $("welcome").classList.add("hidden");const row=document.createElement("div");row.className="message assistant";const avatar=document.createElement("div");avatar.className="avatar";avatar.textContent="AI";
+  const bubble=document.createElement("div");bubble.className="bubble";const h=document.createElement("strong");h.textContent=title;bubble.append(h);
+  if(paragraph){const p=document.createElement("p");p.style.marginTop="7px";p.textContent=paragraph;bubble.append(p);}
+  if(rows&&rows.length){bubble.append(makeTable(headers,rows));const source=document.createElement("div");source.className="source";source.textContent=`${rows.length} result(s) · Sources include document and page columns where available.`;bubble.append(source);
+    const csv=document.createElement("button");csv.className="btn-light btn-small";csv.style.marginTop="10px";csv.textContent="Download CSV";csv.onclick=()=>downloadCSV(headers,rows,filename);bubble.append(csv);
+  }
+  row.append(avatar,bubble);$("chatBody").append(row);$("chatBody").scrollTop=$("chatBody").scrollHeight;conversation.push({role:"assistant",text:title+"\n"+paragraph+"\n"+(rows||[]).map(r=>r.join(" | ")).join("\n")});
+}
+function downloadCSV(headers,rows,name){const esc=v=>'"'+String(v??"").replace(/"/g,'""')+'"';const csv=[headers.map(esc).join(","),...rows.map(r=>r.map(esc).join(","))].join("\r\n");const blob=new Blob(["\ufeff"+csv],{type:"text/csv;charset=utf-8"});const url=URL.createObjectURL(blob);const a=document.createElement("a");a.href=url;a.download=name.replace(/[^a-z0-9_-]/gi,"_")+".csv";a.click();URL.revokeObjectURL(url);}
+
+function allPages(){const out=[];documents.forEach(doc=>doc.pages.forEach(page=>out.push({filename:doc.filename,page:page.page,text:page.text||""})));return out;}
+function normalize(s){return String(s||"").toUpperCase().replace(/[^A-Z0-9]/g,"");}
+function extractLabelledValues(labelRegex,valueRegex){
+  const found=[];for(const doc of documents){for(const page of doc.pages){const lines=(page.text||"").split(/\r?\n/);lines.forEach(line=>{
+    if(labelRegex.test(line)){labelRegex.lastIndex=0;const m=line.match(valueRegex);if(m&&m[1])found.push({value:m[1].trim().replace(/[,:;]+$/,""),filename:doc.filename,page:page.page,context:line.trim()});}
+    labelRegex.lastIndex=0;
+  });}}return found;
+}
+function dedupeRecords(records){const seen=new Set();return records.filter(r=>{const k=normalize(r.value)+"|"+r.filename+"|"+r.page;if(!r.value||seen.has(k))return false;seen.add(k);return true;});}
+function getBillNumbers(){
+  const labels=/(?:INVOICE|BILL|VOUCHER|INV\.?)[\s_-]*(?:NO\.?|NUMBER|#|NUM\.?)/i;
+  const records=[];
+  for(const doc of documents)for(const page of doc.pages){
+    const lines=(page.text||"").split(/\r?\n/);
+    lines.forEach(line=>{
+      if(!labels.test(line))return;
+      const after=line.replace(/^.*?(?:INVOICE|BILL|VOUCHER|INV\.?)[\s_-]*(?:NO\.?|NUMBER|#|NUM\.?)\s*[:#\-\.]?\s*/i,"");
+      const match=after.match(/[A-Z0-9][A-Z0-9./_-]{1,}/i);
+      if(match){const value=match[0].replace(/[.,;:]$/,"");if(!/^\d{2,4}[-/]\d{1,2}[-/]\d{1,4}$/.test(value))records.push({value,filename:doc.filename,page:page.page});}
     });
-    const data = await response.json();
-    if(!response.ok) throw new Error(data.error);
-    token = data.token;
-    sessionStorage.setItem("pdf_token",token);
-    $("password").value = "";
-    showWorkspace();
-  }catch(error){
-    $("loginStatus").textContent = error.message;
-    $("loginStatus").className = "status error";
   }
+  return dedupeRecords(records);
 }
-$("loginBtn").onclick = login;
-$("password").addEventListener("keydown",e=>{if(e.key==="Enter")login();});
-$("logout").onclick = ()=>{
-  token = "";
-  sessionStorage.removeItem("pdf_token");
-  showLogin();
-};
-async function checkHealth(){
-  try{
-    const response = await fetch("/api/health");
-    const data = await response.json();
-    $("serverInfo").textContent =
-      "Status: "+data.status+
-      " | Memory: "+data.memory_mb+" MB"+
-      " | Uptime: "+data.uptime_seconds+" seconds";
-  }catch(error){
-    $("serverInfo").textContent = "Server unavailable.";
+function getGSTINs(){const out=[];const re=/\b[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z][1-9A-Z]Z[0-9A-Z]\b/gi;for(const p of allPages()){for(const m of p.text.matchAll(re))out.push({value:m[0].toUpperCase(),filename:p.filename,page:p.page});}return dedupeRecords(out);}
+function getDates(){const out=[];const re=/\b(?:0?[1-9]|[12]\d|3[01])[-/.](?:0?[1-9]|1[0-2])[-/.](?:20)?\d{2}\b|\b(?:0?[1-9]|1[0-2])[-/.](?:0?[1-9]|[12]\d|3[01])[-/.](?:20)?\d{2}\b/g;for(const p of allPages())for(const m of p.text.matchAll(re))out.push({value:m[0],filename:p.filename,page:p.page});return dedupeRecords(out);}
+function getAmounts(){const out=[];const re=/(?:GRAND\s*TOTAL|INVOICE\s*VALUE|NET\s*AMOUNT|TOTAL\s*AMOUNT|TAXABLE\s*VALUE|TOTAL)\s*[:\-]?\s*(?:₹|RS\.?\s*)?([0-9][0-9,]*(?:\.\d{1,2})?)/gi;for(const p of allPages())for(const m of p.text.matchAll(re))out.push({value:m[1],filename:p.filename,page:p.page,context:m[0]});return dedupeRecords(out);}
+function findDuplicates(records){const groups=new Map();records.forEach(r=>{const key=normalize(r.value);if(!groups.has(key))groups.set(key,[]);groups.get(key).push(r);});return [...groups.values()].filter(g=>g.length>1);}
+function sourceRows(records){return records.map(r=>[r.value,r.filename,r.page]);}
+function answerQuestion(question){
+  const q=question.toLowerCase();const docs=documents.length;const pages=allPages();
+  if(!docs)return {title:"No PDFs uploaded",paragraph:"Upload one or more PDFs first. I will search all successfully processed documents together."};
+  if(/duplicate|duplicated/.test(q)&&/(bill|invoice|number|no|entry)?/.test(q)){const dup=findDuplicates(getBillNumbers());const rows=dup.flatMap(g=>g.map(r=>[r.value,r.filename,r.page]));return {title:`Found ${dup.length} duplicate bill-number group(s)`,paragraph:dup.length?"These normalized bill numbers appear more than once across the uploaded PDFs.":"No repeated labelled bill/invoice numbers were detected.",headers:["Repeated No.","PDF","Page"],rows,name:"duplicate-bills"};}
+  if(/compare|comparison|missing from|common in|difference between/.test(q)){if(documents.length<2)return {title:"Upload at least two PDFs",paragraph:"The comparison request needs two or more successfully processed documents."};const byDoc=documents.map(d=>({doc:d,ids:getBillNumbers().filter(r=>r.filename===d.filename)}));const sets=byDoc.map(x=>new Set(x.ids.map(r=>normalize(r.value))));const all=new Set(sets.flatMap(s=>[...s]));const rows=[];for(const id of all){rows.push([id,...byDoc.map(x=>x.ids.some(r=>normalize(r.value)===id)?"Present":"Missing")]);}return {title:"Bill-number comparison across uploaded PDFs",paragraph:"Compares labelled bill numbers found in each PDF. A missing value means it was not detected by the current extraction rules, not necessarily that it is absent from the original document.",headers:["Bill / Invoice No.",...byDoc.map(x=>x.doc.filename)],rows,name:"pdf-comparison"};}
+  if(/\b(bill|invoice|voucher)\b/.test(q)&&/(number|no\.?|nos\.?|extract|list|all|many|count)/.test(q)){
+    const r=getBillNumbers();return {title:`Found ${r.length} bill / invoice number occurrence(s)`,paragraph:r.length?"Extracted from lines labelled Bill No., Invoice No., Inv No. or Voucher No. Results include source file and page.":"I could not identify clearly labelled bill or invoice numbers. Try checking the page text or use a more specific label.",headers:["Bill / Invoice No.","PDF","Page"],rows:sourceRows(r),name:"bill-numbers"};
   }
+  if(/gstin|gst no|gst number|gst registration/.test(q)){const r=getGSTINs();return {title:`Found ${r.length} GSTIN occurrence(s)`,paragraph:"GSTINs matching the standard 15-character Indian GSTIN pattern.",headers:["GSTIN","PDF","Page"],rows:sourceRows(r),name:"gstin-list"};}
+  if(/\b(date|dates)\b/.test(q)&&/(invoice|bill|all|extract|list|find)/.test(q)){const r=getDates();return {title:`Found ${r.length} date occurrence(s)`,paragraph:"Dates detected in common numeric formats. These include document dates and other dates; verify the label on the source page.",headers:["Date","PDF","Page"],rows:sourceRows(r),name:"dates-list"};}
+  if(/\b(amount|total|taxable|value|grand total|invoice value)\b/.test(q)&&/(extract|find|list|all|total|amount)/.test(q)){const r=getAmounts();return {title:`Found ${r.length} labelled amount(s)`,paragraph:"Amounts detected beside common total and taxable-value labels. This is a text-pattern extraction, not a verified accounting total.",headers:["Amount","PDF","Page"],rows:r.map(x=>[x.value,x.filename,x.page]),name:"amounts-list"};}
+  if(/summari[sz]e|summary|overview|what is this|describe/.test(q)){const rows=documents.map(d=>[d.filename,d.pageCount,d.size_mb,d.scannedPages,d.ocrPagesProcessed]);return {title:`Document collection: ${docs} PDF(s), ${pages.length} page(s)`,paragraph:"This is a processing summary. Ask separately for bill numbers, GSTINs, dates, amounts or a keyword to search the documents.",headers:["PDF","Pages","Size MB","Potential scanned pages","OCR pages processed"],rows,name:"document-summary"};}
+  // General keyword search across every page.
+  const terms=q.replace(/[^a-z0-9\s.-]/g," ").split(/\s+/).filter(w=>w.length>2&&!/^(the|and|for|from|with|that|this|what|find|show|give|tell|please|document|documents|pdf|uploaded|all|about|where|does|have|has|are|was|were)$/.includes(w));
+  if(!terms.length)return {title:"Please make the question more specific",paragraph:"Try: Extract all bill numbers, find GSTINs, list invoice dates, find duplicate invoices, extract totals, summarize documents, or search for a party name."};
+  const hits=[];for(const p of pages){const lines=p.text.split(/\r?\n/);lines.forEach((line,i)=>{const lower=line.toLowerCase();const matched=terms.filter(t=>lower.includes(t));if(matched.length)hits.push({filename:p.filename,page:p.page,line:line.trim(),score:matched.length});});}
+  hits.sort((a,b)=>b.score-a.score);const top=hits.slice(0,100);return {title:`Found ${hits.length} matching text line(s) across ${docs} PDF(s)`,paragraph:hits.length?`Search terms: ${terms.join(", ")}. Showing up to 100 matching lines with their source pages.`:"No matching lines found. Try a shorter keyword or a different spelling.",headers:["Matching text","PDF","Page"],rows:top.map(h=>[h.line,h.filename,h.page]),name:"pdf-search"};
 }
-function addResult(data){
-  const container = document.createElement("div");
-  container.className = "result";
-  const heading = document.createElement("h4");
-  heading.textContent = data.filename;
-  const meta = document.createElement("div");
-  meta.className = "meta";
-  meta.textContent =
-    data.pageCount+" pages | "+data.size_mb+" MB | "+
-    data.ocrPagesProcessed+" OCR pages | "+
-    data.scannedPages+" potentially scanned pages";
-  const download = document.createElement("button");
-  download.className = "secondary";
-  download.textContent = "Download extracted TXT";
-  download.onclick = ()=>{
-    const text = data.pages.map(p=>
-      "========== PAGE "+p.page+" ==========\n\n"+p.text
-    ).join("\n\n");
-    const blob = new Blob([text],{type:"text/plain;charset=utf-8"});
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = data.filename.replace(/\.pdf$/i,"")+"_extracted.txt";
-    a.click();
-    URL.revokeObjectURL(url);
-  };
-  container.append(heading,meta,download);
-  data.pages.forEach(page=>{
-    const box = document.createElement("div");
-    box.className = "page";
-    const title = document.createElement("b");
-    title.textContent = "Page "+page.page+" · "+page.source;
-    const text = document.createElement("div");
-    text.textContent = page.text;
-    box.append(title,text);
-    container.append(box);
-  });
-  $("results").prepend(container);
+function sendQuestion(){
+  const question=$("question").value.trim();if(!question)return;$("question").value="";addMessage("user",question);
+  const answer=answerQuestion(question);
+  addStructuredMessage(answer.title,answer.paragraph,answer.headers,answer.rows,answer.name||"pdf-answer");
 }
-function uploadOne(file){
-  return new Promise((resolve,reject)=>{
-    const xhr = new XMLHttpRequest();
-    const form = new FormData();
-    form.append("pdf",file);
-    xhr.open("POST","/api/analyze");
-    xhr.setRequestHeader("Authorization","Bearer "+token);
-    xhr.upload.onprogress = event=>{
-      if(event.lengthComputable){
-        const percent = Math.round(event.loaded/event.total*100);
-        $("progressBar").style.width = percent+"%";
-        $("uploadStatus").textContent =
-          "Uploading "+file.name+": "+percent+"%";
-      }
-    };
-    xhr.onload = ()=>{
-      let data;
-      try{data=JSON.parse(xhr.responseText);}
-      catch(_){return reject(new Error("Invalid server response."));}
-      if(xhr.status===401){
-        sessionStorage.removeItem("pdf_token");
-        token="";
-        showLogin();
-        return reject(new Error("Session expired. Please login again."));
-      }
-      if(xhr.status<200||xhr.status>=300){
-        return reject(new Error(data.error||"Processing failed."));
-      }
-      resolve(data);
-    };
-    xhr.onerror = ()=>reject(new Error("Network connection failed."));
-    xhr.ontimeout = ()=>reject(new Error("Request timed out. Try a smaller PDF."));
-    xhr.timeout = 0;
-    xhr.send(form);
-  });
-}
-$("analyzeBtn").onclick = async ()=>{
-  const files = Array.from($("files").files);
-  if(!files.length){alert("Please select PDF files.");return;}
-  if(files.some(file=>
-    !file.name.toLowerCase().endsWith(".pdf")||
-    file.size>200*1024*1024
-  )){
-    alert("Select valid PDF files up to 200 MB each.");
-    return;
-  }
-  $("analyzeBtn").disabled = true;
-  $("results").innerHTML = "";
-  let completed = 0;
-  for(const file of files){
-    $("progressBar").style.width = "0%";
-    try{
-      $("uploadStatus").textContent = "Processing "+file.name+"...";
-      const result = await uploadOne(file);
-      addResult(result);
-      completed++;
-    }catch(error){
-      const message = document.createElement("p");
-      message.className = "error";
-      message.textContent = file.name+": "+error.message;
-      $("results").prepend(message);
-    }
-  }
-  $("uploadStatus").textContent =
-    completed+" of "+files.length+" documents processed.";
-  $("progressBar").style.width = "100%";
-  $("analyzeBtn").disabled = false;
-  $("files").value = "";
-  checkHealth();
-};
+$("sendBtn").onclick=sendQuestion;$("question").addEventListener("keydown",e=>{if(e.key==="Enter"&&!e.shiftKey){e.preventDefault();sendQuestion();}});
+document.querySelectorAll(".suggestions button").forEach(b=>b.onclick=()=>{$("question").value=b.dataset.q;sendQuestion();});
+$("clearChat").onclick=()=>{conversation=[];$("chatBody").innerHTML="";const welcome=document.createElement("div");welcome.id="welcome";welcome.className="welcome";welcome.innerHTML='<div class="emoji">💬</div><h2>Ask anything about your PDFs</h2><p>All uploaded documents are searched together.</p>';$("chatBody").append(welcome);};
+$("exportChat").onclick=()=>{const text=conversation.map(m=>m.role.toUpperCase()+"\n"+m.text).join("\n\n----------------\n\n");const blob=new Blob([text],{type:"text/plain;charset=utf-8"});const url=URL.createObjectURL(blob);const a=document.createElement("a");a.href=url;a.download="pdf-chat-session.txt";a.click();URL.revokeObjectURL(url);};
 if(token)showWorkspace();else showLogin();
 </script>
 </body>
