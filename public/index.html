@@ -1,0 +1,236 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Personal PDF Analyzer</title>
+<style>
+*{box-sizing:border-box}
+body{margin:0;font-family:Inter,Arial,sans-serif;background:#f4f6fa;color:#202938}
+header{background:#151c2c;color:white;padding:19px 24px;display:flex;justify-content:space-between;align-items:center}
+header h2{margin:0;font-size:20px}
+main{max-width:1050px;margin:30px auto;padding:0 16px}
+.card{background:white;border:1px solid #e2e7ef;border-radius:13px;padding:22px;margin-bottom:20px;box-shadow:0 3px 14px rgba(0,0,0,.035)}
+h3{margin-top:0}
+input,button{font:inherit}
+input[type=password]{width:100%;padding:12px;border:1px solid #ccd3df;border-radius:7px;margin:10px 0}
+button{border:0;border-radius:7px;padding:11px 17px;cursor:pointer;background:#2563eb;color:white;font-weight:600}
+button:disabled{opacity:.5;cursor:not-allowed}
+.secondary{background:#475569}
+.hidden{display:none!important}
+.drop{border:2px dashed #b8c5d9;padding:35px 15px;text-align:center;border-radius:10px;background:#f8fafc;margin:15px 0}
+.drop input{max-width:100%;margin-top:14px}
+.progress{height:9px;background:#e5e7eb;border-radius:10px;overflow:hidden;margin-top:12px}
+.progress div{height:100%;width:0;background:#2563eb;transition:width .2s}
+.status{font-size:13px;color:#64748b;margin-top:10px}
+.result{border:1px solid #e2e8f0;border-radius:10px;padding:15px;margin-top:15px}
+.page{background:#f8fafc;border-left:3px solid #2563eb;padding:12px;margin:10px 0;white-space:pre-wrap;overflow-wrap:anywhere;font-family:Arial,sans-serif;font-size:13px;max-height:350px;overflow:auto}
+.meta{display:flex;flex-wrap:wrap;gap:12px;color:#64748b;font-size:13px;margin:10px 0}
+.error{color:#dc2626}.success{color:#15803d}
+footer{text-align:center;color:#94a3b8;font-size:12px;padding:25px}
+</style>
+</head>
+<body>
+<header>
+  <h2>📄 Personal PDF Analyzer</h2>
+  <button id="logout" class="secondary hidden">Logout</button>
+</header>
+<main>
+<section id="login" class="card">
+  <h3>Welcome back</h3>
+  <p>Enter your private workspace password.</p>
+  <input id="password" type="password" placeholder="Enter password">
+  <button id="loginBtn">Login</button>
+  <div id="loginStatus" class="status"></div>
+</section>
+<section id="workspace" class="hidden">
+  <div class="card">
+    <h3>Upload PDF documents</h3>
+    <p>Maximum upload: <b>200 MB per PDF</b></p>
+    <p class="status">Digital PDFs are extracted directly. Scanned PDFs are processed using English OCR.</p>
+    <div class="drop">
+      <div>📁 Select one or more PDF documents</div>
+      <input id="files" type="file" accept=".pdf,application/pdf" multiple>
+    </div>
+    <button id="analyzeBtn">Analyze PDFs</button>
+    <div class="progress"><div id="progressBar"></div></div>
+    <div id="uploadStatus" class="status"></div>
+  </div>
+  <div class="card">
+    <h3>Processing information</h3>
+    <div id="serverInfo" class="status">Checking server...</div>
+  </div>
+  <div class="card">
+    <h3>Analysis results</h3>
+    <div id="results"><p class="status">No documents analyzed yet.</p></div>
+  </div>
+</section>
+</main>
+<footer>Personal PDF Analyzer · Phase 1 · Temporary server-side processing</footer>
+<script>
+const $ = id => document.getElementById(id);
+let token = sessionStorage.getItem("pdf_token") || "";
+
+function showWorkspace(){
+  $("login").classList.add("hidden");
+  $("workspace").classList.remove("hidden");
+  $("logout").classList.remove("hidden");
+  checkHealth();
+}
+function showLogin(){
+  $("workspace").classList.add("hidden");
+  $("login").classList.remove("hidden");
+  $("logout").classList.add("hidden");
+}
+async function login(){
+  const password = $("password").value;
+  $("loginStatus").textContent = "Checking...";
+  try{
+    const response = await fetch("/api/login",{
+      method:"POST",
+      headers:{"Content-Type":"application/json"},
+      body:JSON.stringify({password})
+    });
+    const data = await response.json();
+    if(!response.ok) throw new Error(data.error);
+    token = data.token;
+    sessionStorage.setItem("pdf_token",token);
+    $("password").value = "";
+    showWorkspace();
+  }catch(error){
+    $("loginStatus").textContent = error.message;
+    $("loginStatus").className = "status error";
+  }
+}
+$("loginBtn").onclick = login;
+$("password").addEventListener("keydown",e=>{if(e.key==="Enter")login();});
+$("logout").onclick = ()=>{
+  token = "";
+  sessionStorage.removeItem("pdf_token");
+  showLogin();
+};
+async function checkHealth(){
+  try{
+    const response = await fetch("/api/health");
+    const data = await response.json();
+    $("serverInfo").textContent =
+      "Status: "+data.status+
+      " | Memory: "+data.memory_mb+" MB"+
+      " | Uptime: "+data.uptime_seconds+" seconds";
+  }catch(error){
+    $("serverInfo").textContent = "Server unavailable.";
+  }
+}
+function addResult(data){
+  const container = document.createElement("div");
+  container.className = "result";
+  const heading = document.createElement("h4");
+  heading.textContent = data.filename;
+  const meta = document.createElement("div");
+  meta.className = "meta";
+  meta.textContent =
+    data.pageCount+" pages | "+data.size_mb+" MB | "+
+    data.ocrPagesProcessed+" OCR pages | "+
+    data.scannedPages+" potentially scanned pages";
+  const download = document.createElement("button");
+  download.className = "secondary";
+  download.textContent = "Download extracted TXT";
+  download.onclick = ()=>{
+    const text = data.pages.map(p=>
+      "========== PAGE "+p.page+" ==========\n\n"+p.text
+    ).join("\n\n");
+    const blob = new Blob([text],{type:"text/plain;charset=utf-8"});
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = data.filename.replace(/\.pdf$/i,"")+"_extracted.txt";
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+  container.append(heading,meta,download);
+  data.pages.forEach(page=>{
+    const box = document.createElement("div");
+    box.className = "page";
+    const title = document.createElement("b");
+    title.textContent = "Page "+page.page+" · "+page.source;
+    const text = document.createElement("div");
+    text.textContent = page.text;
+    box.append(title,text);
+    container.append(box);
+  });
+  $("results").prepend(container);
+}
+function uploadOne(file){
+  return new Promise((resolve,reject)=>{
+    const xhr = new XMLHttpRequest();
+    const form = new FormData();
+    form.append("pdf",file);
+    xhr.open("POST","/api/analyze");
+    xhr.setRequestHeader("Authorization","Bearer "+token);
+    xhr.upload.onprogress = event=>{
+      if(event.lengthComputable){
+        const percent = Math.round(event.loaded/event.total*100);
+        $("progressBar").style.width = percent+"%";
+        $("uploadStatus").textContent =
+          "Uploading "+file.name+": "+percent+"%";
+      }
+    };
+    xhr.onload = ()=>{
+      let data;
+      try{data=JSON.parse(xhr.responseText);}
+      catch(_){return reject(new Error("Invalid server response."));}
+      if(xhr.status===401){
+        sessionStorage.removeItem("pdf_token");
+        token="";
+        showLogin();
+        return reject(new Error("Session expired. Please login again."));
+      }
+      if(xhr.status<200||xhr.status>=300){
+        return reject(new Error(data.error||"Processing failed."));
+      }
+      resolve(data);
+    };
+    xhr.onerror = ()=>reject(new Error("Network connection failed."));
+    xhr.ontimeout = ()=>reject(new Error("Request timed out. Try a smaller PDF."));
+    xhr.timeout = 0;
+    xhr.send(form);
+  });
+}
+$("analyzeBtn").onclick = async ()=>{
+  const files = Array.from($("files").files);
+  if(!files.length){alert("Please select PDF files.");return;}
+  if(files.some(file=>
+    !file.name.toLowerCase().endsWith(".pdf")||
+    file.size>200*1024*1024
+  )){
+    alert("Select valid PDF files up to 200 MB each.");
+    return;
+  }
+  $("analyzeBtn").disabled = true;
+  $("results").innerHTML = "";
+  let completed = 0;
+  for(const file of files){
+    $("progressBar").style.width = "0%";
+    try{
+      $("uploadStatus").textContent = "Processing "+file.name+"...";
+      const result = await uploadOne(file);
+      addResult(result);
+      completed++;
+    }catch(error){
+      const message = document.createElement("p");
+      message.className = "error";
+      message.textContent = file.name+": "+error.message;
+      $("results").prepend(message);
+    }
+  }
+  $("uploadStatus").textContent =
+    completed+" of "+files.length+" documents processed.";
+  $("progressBar").style.width = "100%";
+  $("analyzeBtn").disabled = false;
+  $("files").value = "";
+  checkHealth();
+};
+if(token)showWorkspace();else showLogin();
+</script>
+</body>
+</html>
