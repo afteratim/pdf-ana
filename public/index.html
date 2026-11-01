@@ -147,12 +147,79 @@ function getDates(){
 }
 function getAmounts(){
  const out=[];
- const labels=[['Invoice total',/\b(?:invoice\s*value|invoice\s*total|total\s*invoice\s*value)\b/i],['Grand total',/\bgrand\s*total\b/i],['Taxable value',/\btaxable\s*(?:value|amount)\b/i],['CGST',/\bcentral\s*gst|\bcgst\b/i],['SGST',/\bstate\s*gst|\bsgst\b/i],['IGST',/\bintegrated\s*gst|\bigst\b/i],['Amount payable',/\b(?:amount\s*payable|net\s*payable|balance\s*due|net\s*amount)\b/i],['Other total',/\b(?:total\s*amount|total\s*value|amount\s*due)\b/i]];
- const money=/(?:₹|INR\s*|Rs\.?\s*)?([0-9]{1,3}(?:,[0-9]{2,3})*(?:\.[0-9]{1,2})?|[0-9]+\.[0-9]{1,2})\b(?!\s*%)/g;
- for(const p of allPages())for(const line of p.text.split(/\r?\n/)){let type='Amount';for(const [label,re] of labels)if(re.test(line)){type=label;break;}if(type==='Amount')continue;for(const m of line.matchAll(money)){const val=m[1].replace(/,/g,'');if(Number(val)>0)out.push({...record(m[1],p,line),amountType:type});}}
- const seen=new Set();return out.filter(r=>{const k=r.amountType+'|'+r.value+'|'+r.filename+'|'+r.page;if(seen.has(k))return false;seen.add(k);return true;});
+ const labels=[
+  ["Taxable value",/\b(?:taxable\s*(?:value|amount)|assessable\s*value)\b/i],
+  ["CGST",/\b(?:central\s*gst|cgst)\b/i],
+  ["SGST",/\b(?:state\s*gst|sgst)\b/i],
+  ["IGST",/\b(?:integrated\s*gst|igst)\b/i],
+  ["Cess",/\b(?:cess)\b/i],
+  ["Invoice total",/\b(?:invoice\s*(?:value|total)|total\s*invoice\s*value)\b/i],
+  ["Grand total",/\bgrand\s*total\b/i],
+  ["Amount payable",/\b(?:amount\s*payable|net\s*payable|balance\s*due|net\s*amount|amount\s*due)\b/i],
+  ["Other total",/\b(?:total\s*amount|total\s*value)\b/i]
+ ];
+ // Indian and international comma grouping; never treat invoice/GR/E-way numbers as amounts.
+ const money=/(?:₹|INR\s*|Rs\.?\s*)?((?:\d{1,3}(?:,\d{2,3})+|\d+)(?:\.\d{1,2})?)(?!\s*%)/g;
+ const pages=allPages();
+ for(const p of pages){
+  const lines=p.text.split(/\r?\n/);
+  for(let i=0;i<lines.length;i++){
+   const line=lines[i], hit=labels.find(([_,re])=>re.test(line));
+   if(!hit)continue;
+   let candidates=[...line.matchAll(money)];
+   // PDFs often put the label and value on adjacent lines / columns.
+   if(!candidates.length && lines[i+1]) candidates=[...lines[i+1].matchAll(money)];
+   for(const m of candidates){
+    const raw=m[1], val=Number(raw.replace(/,/g,""));
+    if(!Number.isFinite(val)||val<=0)continue;
+    out.push({...record(raw,p,lines.slice(Math.max(0,i-1),Math.min(lines.length,i+2)).join(" | ")),amountType:hit[0]});
+   }
+  }
+ }
+ const seen=new Set();
+ return out.filter(r=>{const k=r.amountType+"|"+r.value.replace(/,/g,"")+"|"+r.filename+"|"+r.page;if(seen.has(k))return false;seen.add(k);return true;});
 }
-function getPartyNames(){const out=[],re=/(?:supplier\s*name|buyer\s*name|consignee|bill\s*to|ship\s*to|party\s*name|name\s*of\s*(?:the\s*)?(?:party|supplier|recipient))\s*[:\-]?\s*([^\n]{3,90})/gi;for(const p of allPages())for(const m of p.text.matchAll(re)){out.push(record(m[1].trim(),p,m[0]));}return uniqueRecords(out);}
+function getPartyNames(){
+ const out=[];
+ const labelRe=/(?:supplier\s*(?:\/|and)?\s*(?:name)?|seller\s*(?:name)?|buyer\s*(?:name)?|consignee(?:\s*name)?|bill\s*to|ship\s*to|party\s*name|customer\s*(?:name)?|recipient\s*(?:name)?|name\s*of\s*(?:the\s*)?(?:party|supplier|recipient)|details\s*of\s*(?:supplier|receiver|recipient)|receiver(?:\s*details)?|billed\s*to|dispatch\s*to)\s*[:\-]?\s*/i;
+ const clean=v=>String(v||"").replace(/^[\s:;,\-]+|[\s;|]+$/g,"").replace(/\s{2,}/g," ").trim();
+ const reject=/^(?:gstin|gst\s*in|pan|state|state\s*code|address|phone|mobile|email|invoice|invoice\s*no|date|place\s*of\s*supply|reverse\s*charge|original|duplicate|tax\s*invoice|details)$/i;
+ for(const p of allPages()){
+  const lines=p.text.split(/\r?\n/);
+  for(let i=0;i<lines.length;i++){
+   const line=lines[i];
+   const m=labelRe.exec(line);
+   if(!m)continue;
+   let value=clean(line.slice(m.index+m[0].length));
+   // If label is alone, use the next non-empty line, but not another field label.
+   if(!value && lines[i+1] && !labelRe.test(lines[i+1])){
+    value=clean(lines[i+1]);
+   }
+   value=value.split(/\s{3,}|\s+\b(?:GSTIN|PAN|Invoice\s*No\.?|Phone|Mobile|Email)\b/i)[0].trim();
+   value=value.replace(/[,:;|]+$/,"").trim();
+   if(value.length<3||value.length>100||reject.test(value))continue;
+   if(/^(?:\d[\d\s/-]*|[A-Z0-9]{10,})$/i.test(value))continue;
+   out.push({...record(value,p,line+(lines[i+1]&&!line.slice(m.index+m[0].length).trim()?" | "+lines[i+1]:"")),partyType:m[0].replace(/[:\-]\s*$/,"").trim()});
+  }
+  // Fallback: common invoice header patterns, including names printed without an explicit label.
+  for(let i=0;i<Math.min(lines.length,14);i++){
+   const line=clean(lines[i]);
+   if(/^(?:M\/s\.?|Messrs\.?)\s+[\w&().,' -]{3,80}$/i.test(line)){
+    const value=line.replace(/^(?:M\/s\.?|Messrs\.?)\s+/i,"").trim();
+    if(!reject.test(value))out.push({...record(value,p,line),partyType:"Business name"});
+    continue;
+   }
+   const letters=(line.match(/[A-Za-z]/g)||[]).length;
+   const upper=(line.match(/[A-Z]/g)||[]).length;
+   const excludedHeader=/^(?:TAX\s*INVOICE|CASH\s*MEMO|CREDIT\s*NOTE|DEBIT\s*NOTE|ORIGINAL|DUPLICATE|TRIPLICATE|COPY|GSTIN|PAN|INVOICE|BILL|E\s*WAY\s*BILL|TERMS|CONDITIONS|DESCRIPTION|QTY|RATE|AMOUNT|PARTICULARS)$/i;
+   if(line.length>=4&&line.length<=75&&letters>=4&&upper/letters>=0.72&&!excludedHeader.test(line)&&!/\d{3,}|@|https?:/i.test(line)){
+    out.push({...record(line,p,line),partyType:"Possible invoice-header name · verify"});
+   }
+  }
+ }
+ const seen=new Set();
+ return out.filter(r=>{const k=normalize(r.value)+"|"+r.filename+"|"+r.page;if(!r.value||seen.has(k))return false;seen.add(k);return true;});
+}
 function duplicateGroups(records){const groups=new Map();records.forEach(r=>{const key=normalize(r.value);if(!groups.has(key))groups.set(key,[]);groups.get(key).push(r);});return [...groups.values()].filter(g=>g.length>1);}
 function rowsWithSources(records){return records.map(r=>[r.value,r.filename,r.page,r.snippet]);}
 function searchLines(question){const stop=new Set("the and for from with that this what find show give tell please document documents pdf uploaded all about where does have has are was were bill invoice number extract list every each across my your tell me get details of is in on at to by".split(" "));const terms=question.toLowerCase().replace(/[^a-z0-9\s.-]/g," ").split(/\s+/).filter(w=>w.length>2&&!stop.has(w));const hits=[];for(const p of allPages())for(const line of p.text.split(/\r?\n/)){const lower=line.toLowerCase(),matched=terms.filter(t=>lower.includes(t));if(matched.length)hits.push({record:record(line.trim(),p,line),score:matched.length});}return hits.sort((a,b)=>b.score-a.score).slice(0,100).map(x=>x.record);}
@@ -161,9 +228,9 @@ function answerQuestion(question){
  if(/duplicate|duplicated/.test(q)){const groups=duplicateGroups(getBillNumbers()),records=groups.flat();return {title:`Found ${groups.length} duplicate bill-number group(s)`,paragraph:groups.length?"These normalized bill or invoice numbers were detected more than once. Check the snippets to confirm they refer to the same bill.":"No duplicate labelled bill numbers were detected by the current extraction rules.",headers:["Bill / Invoice No.","PDF","Page","Original text snippet"],rows:rowsWithSources(records),name:"duplicate-bills"};}
  if(/compare|comparison|missing from|common in|difference between/.test(q)){if(documents.length<2)return {title:"Upload at least two PDFs",paragraph:"Comparison requires at least two successfully processed PDFs."};const billRecords=getBillNumbers(),perDoc=documents.map(d=>({doc:d,ids:billRecords.filter(r=>r.filename===d.filename)})),all=new Set(perDoc.flatMap(x=>x.ids.map(r=>normalize(r.value))));const rows=[...all].map(id=>[id,...perDoc.map(x=>x.ids.some(r=>normalize(r.value)===id)?"Detected":"Not detected")]);return {title:"Bill-number comparison across all PDFs",paragraph:"This compares detected bill numbers. ‘Not detected’ means the extraction rules did not find that number in that PDF; it does not prove the original document lacks it.",headers:["Bill / Invoice No.",...perDoc.map(x=>x.doc.filename)],rows,name:"pdf-comparison"};}
  if(/gstin|gst no|gst number|gst registration/.test(q)){const r=getGSTINs();return {title:`Found ${r.length} GSTIN occurrence(s)`,paragraph:"Values match the standard 15-character Indian GSTIN pattern. This is format validation, not government registration verification.",headers:["GSTIN","PDF","Page","Original text snippet"],rows:rowsWithSources(r),name:"gstin-list"};}
- if(/\b(date|dates)\b/.test(q)&&/(invoice|bill|all|extract|list|find)/.test(q)){const r=getDates();return {title:`Found ${r.length} date occurrence(s)`,paragraph:"Detected numeric dates. The snippet helps distinguish invoice dates from due dates, dispatch dates and other dates.",headers:["Date","Date type","PDF","Page","Original text snippet"],rows:r.map(x=>[x.value,x.dateType,x.filename,x.page,x.snippet]),evidence:r,name:"dates-list"};}
+ if(/\b(date|dates)\b/.test(q)){const r=getDates();return {title:`Found ${r.length} date occurrence(s)`,paragraph:"Detected numeric dates. The snippet helps distinguish invoice dates from due dates, dispatch dates and other dates.",headers:["Date","Date type","PDF","Page","Original text snippet"],rows:r.map(x=>[x.value,x.dateType,x.filename,x.page,x.snippet]),evidence:r,name:"dates-list"};}
+ if(/\b(amount|total|taxable|value|grand total|invoice value|cgst|sgst|igst|cess)\b/.test(q)){const r=getAmounts();return {title:`Found ${r.length} labelled amount(s)`,paragraph:"Amounts were extracted beside common tax and total labels. Check the source snippet and page; values are not independently verified.",headers:["Amount","Amount type","PDF","Page","Original text snippet"],rows:r.map(x=>[x.value,x.amountType,x.filename,x.page,x.snippet]),evidence:r,name:"amounts-list"};}
  if(/\b(bill|invoice|voucher|eway|e-way)\b/.test(q)&&/(number|no\.?|nos\.?|extract|list|all|many|count|bill nos)/.test(q)){const r=getBillNumbers();return {title:`Found ${r.length} bill / invoice number occurrence(s)`,paragraph:r.length?"Detected from bill, invoice, voucher and E-way bill labels. Review each original text snippet because OCR can confuse characters such as O/0 and I/1.":"No clearly labelled bill numbers were detected. Try opening the extraction report and checking the source page.",headers:["Bill / Invoice No.","PDF","Page","Original text snippet"],rows:rowsWithSources(r),name:"bill-numbers"};}
- if(/\b(amount|total|taxable|value|grand total|invoice value)\b/.test(q)){const r=getAmounts();return {title:`Found ${r.length} labelled amount(s)`,paragraph:"Amounts were extracted beside common total/value labels. This is not a verified accounting total; check the source snippet and page.",headers:["Amount","Amount type","PDF","Page","Original text snippet"],rows:r.map(x=>[x.value,x.amountType,x.filename,x.page,x.snippet]),name:"amounts-list"};}
  if(/party|supplier|buyer|consignee|vendor/.test(q)){const r=getPartyNames();return {title:`Found ${r.length} party-name candidate(s)`,paragraph:"Names were extracted from common supplier, buyer, consignee and party labels. Verify candidates where the source label is ambiguous.",headers:["Party name","PDF","Page","Original text snippet"],rows:rowsWithSources(r),name:"party-names"};}
  if(/summari[sz]e|summary|overview|what is this|describe/.test(q)){const rows=documents.map(d=>[d.filename,d.pageCount,d.size_mb,d.report?.nativePages??0,d.report?.ocrPages??d.ocrPagesProcessed??0,d.report?.unreadablePages??0,d.report?.status||"review"]);return {title:`Document collection: ${documents.length} PDF(s), ${pages.length} page(s)`,paragraph:"This summary describes processing and extraction coverage, not a complete semantic summary of every document.",headers:["PDF","Pages","Size MB","Native pages","OCR pages","Unreadable","Status"],rows,name:"document-summary"};}
  const hits=searchLines(question);return {title:`Found ${hits.length} matching text line(s)`,paragraph:hits.length?"Matches are shown with the original text snippet, document and page. Ask a more specific question to extract a structured field.":"No matching text was found. Try a shorter keyword, alternate spelling or one of the quick actions.",headers:["Original text snippet","PDF","Page","Context"],rows:hits.map(r=>[r.value,r.filename,r.page,r.snippet]),name:"pdf-search",evidence:hits};
