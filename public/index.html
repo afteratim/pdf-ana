@@ -21,6 +21,7 @@
   <div class="drop"><strong>Upload PDF files</strong><div class="hint">Up to 200 MB per file · multiple files supported</div><input id="files" type="file" accept=".pdf,application/pdf" multiple></div>
   <button id="analyzeBtn" style="width:100%">Upload & process</button><div class="progress"><div id="progressBar"></div></div><div id="uploadStatus" class="status"></div><div id="processingStage" class="stage"></div><div id="processingCard" class="processing-card" aria-live="polite"><div class="processing-top"><div class="scan-spinner"></div><div><strong id="processingTitle">Analyzing PDF</strong><div id="processingDetail" class="small-note">Please keep this tab open while the PDF is processed.</div></div></div><div class="scan-track"></div><div class="processing-steps"><span class="current">1 · Upload</span><span>2 · Validate</span><span>3 · Extract text</span><span>4 · OCR</span><span>5 · Report</span></div></div>
   <div id="fileList" class="file-list"><div class="empty-docs">No documents uploaded yet.</div></div>
+  <div class="report" style="margin-top:12px"><strong>Combined extraction statistics</strong><div id="collectionReport" class="small-note" aria-live="polite">Upload PDFs to see combined extraction statistics.</div></div>
   <div class="toolbar" style="margin-top:12px"><button id="clearDocs" class="btn-light btn-small">Clear documents</button></div>
   <div class="warning">Documents and extracted text stay in this browser session after processing. Original PDFs are temporarily uploaded to Render and deleted after extraction. Refreshing the tab clears the session.</div>
  </div>
@@ -75,6 +76,7 @@ function updateDocumentUI(){
  });
  $("scopeText").textContent=documents.length?`${documents.length} document(s) loaded · Searching all documents`:"No documents loaded · Upload PDFs to begin";
  const cr=$("collectionReport");
+ if(!cr)return; // Keep document upload successful even if the optional dashboard panel is absent.
  if(!documents.length){cr.textContent="Upload PDFs to see combined extraction statistics.";return;}
  const sum=key=>documents.reduce((n,d)=>n+Number(d.report?.[key]??0),0);
  const fields=documents.reduce((a,d)=>{const f=d.report?.fieldCounts||{};a.bills+=Number(f.billNumbers||0);a.gstins+=Number(f.gstins||0);a.dates+=Number(f.dates||0);a.amounts+=Number(f.labelledAmounts||0);return a;},{bills:0,gstins:0,dates:0,amounts:0});
